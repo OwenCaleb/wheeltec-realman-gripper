@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.env.*
+config.json
+config.local*.json
+*.log
+/latest-state.json
+/test-*.json
+/probe-*.json
+/console-recovery-test.json
+/diagnostics/

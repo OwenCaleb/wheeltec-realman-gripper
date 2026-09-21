@@ -1,0 +1,15 @@
+{
+  "port": "auto",
+  "usb_serial_number": "",
+  "baudrate": 115200,
+  "device_id": 1,
+  "subdivision": 32,
+  "open_direction": 0,
+  "default_speed_rad_s": 1.0,
+  "response_timeout_s": 2.0,
+  "startup_delay_s": 2.0,
+  "full_travel_deg": 1872.0,
+  "switch_speed_rad_s": 10.0,
+  "keyboard_step_deg": 180.0,
+  "keyboard_speed_rad_s": 10.0
+}
