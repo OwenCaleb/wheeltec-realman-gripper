@@ -26,10 +26,14 @@ with PynputKeys() as keys:
     keys.activate()
     sender = keyboard.Controller()
     sender.press('c')
+    time.sleep(.05)
+    assert keys.snapshot()[0] is None
+    sender.release('c')
+    sender.press('p')
     wait_for(keys, 'close')
     time.sleep(.15)  # 不需要重复发送 press。
     assert keys.snapshot()[0] == 'close'
-    sender.release('c')
+    sender.release('p')
     wait_for(keys, None)
     sender.press('o')
     wait_for(keys, 'open')

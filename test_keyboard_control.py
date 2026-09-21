@@ -32,24 +32,39 @@ class KeyboardAndSwitchTests(unittest.TestCase):
     def test_hold_without_autorepeat_and_real_release(self):
         keys = HeldKeys()
         keys.activate()
-        keys.press(SimpleNamespace(char="C"), now=1)
+        keys.press(SimpleNamespace(char="P"), now=1)
         self.assertEqual(keys.snapshot(1), ("close", 1, False))
         self.assertEqual(keys.snapshot(100), ("close", 1, False))
-        keys.release("c", now=101)
+        keys.release("p", now=101)
         self.assertIsNone(keys.snapshot(101.03)[0])
         keys.press("o", now=102)
         self.assertEqual(keys.snapshot(102), ("open", 2, False))
 
-    def test_x11_autorepeat_does_not_release_or_queue_motion(self):
+    def test_arm_c_key_does_not_control_or_pause_gripper(self):
         keys = HeldKeys()
         keys.activate()
         keys.press("c", 1)
+        self.assertEqual(keys.snapshot(1), (None, 0, False))
+        keys.press("p", 2)
+        self.assertEqual(keys.snapshot(2), ("close", 1, False))
+        keys.release("c", 3)
+        self.assertEqual(keys.snapshot(3), ("close", 1, False))
+        keys.release("p", 4)
+        self.assertIsNone(keys.snapshot(4.03)[0])
+        keys.press("o", 5)
+        keys.press("c", 6)
+        self.assertEqual(keys.snapshot(6), ("open", 2, False))
+
+    def test_x11_autorepeat_does_not_release_or_queue_motion(self):
+        keys = HeldKeys()
+        keys.activate()
+        keys.press("p", 1)
         for t in (2, 3, 4):
-            keys.release("c", t)
+            keys.release("p", t)
             self.assertEqual(keys.snapshot(t + .001)[0], "close")
-            keys.press("c", t + .002)
+            keys.press("p", t + .002)
             self.assertEqual(keys.snapshot(t + .01), ("close", 1, False))
-        keys.release("c", 5)
+        keys.release("p", 5)
         self.assertIsNone(keys.snapshot(5.03)[0])
 
     def test_pause_both_keys_and_ctrl_require_release(self):
@@ -57,33 +72,33 @@ class KeyboardAndSwitchTests(unittest.TestCase):
             with self.subTest(pause=pause):
                 keys = HeldKeys()
                 keys.activate()
-                keys.press("c", 1)
+                keys.press("p", 1)
                 keys.press(pause, 2)
                 self.assertIsNone(keys.snapshot(2)[0])
                 keys.release(pause, 3)
-                keys.press("c", 4)  # 自动重复不能解除暂停。
+                keys.press("p", 4)  # 自动重复不能解除暂停。
                 self.assertIsNone(keys.snapshot(4)[0])
-                keys.release("c", 5)
+                keys.release("p", 5)
                 keys.snapshot(5.1)
-                keys.press("c", 6)
+                keys.press("p", 6)
                 self.assertEqual(keys.snapshot(6)[0], "close")
 
     def test_key_held_before_ready_does_not_start(self):
         keys = HeldKeys()
-        keys.press("c")
+        keys.press("p")
         keys.activate()
         self.assertIsNone(keys.snapshot()[0])
-        keys.press("c")
+        keys.press("p")
         self.assertIsNone(keys.snapshot()[0])
-        keys.release("c", 0)
+        keys.release("p", 0)
         keys.snapshot(1)
-        keys.press("c", 2)
+        keys.press("p", 2)
         self.assertEqual(keys.snapshot(2)[0], "close")
 
     def test_quit_overrides_held_key(self):
         keys = HeldKeys()
         keys.activate()
-        keys.press("c", 1)
+        keys.press("p", 1)
         keys.press(SimpleNamespace(name="esc"), 2)
         self.assertEqual(keys.snapshot(2), (None, 1, True))
         keys.press("o", 3)

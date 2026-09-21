@@ -47,7 +47,7 @@ class HeldKeys:
             if now >= deadline:
                 self.pressed.discard(key)
                 del self.releases[key]
-        if not self.pressed.intersection({"o", "c", "ctrl", "ctrl_l", "ctrl_r"}):
+        if not self.pressed.intersection({"o", "p", "ctrl", "ctrl_l", "ctrl_r"}):
             self.inhibited = False
 
     def press(self, key, now=None):
@@ -60,17 +60,17 @@ class HeldKeys:
                 self.quitting = True
             if key in (" ", "ctrl", "ctrl_l", "ctrl_r"):
                 self.inhibited = True
-            if key in ("o", "c") and key not in self.pressed:
+            if key in ("o", "p") and key not in self.pressed:
                 self.epoch += 1
             self.pressed.add(key)
-            if {"o", "c"}.issubset(self.pressed):
+            if {"o", "p"}.issubset(self.pressed):
                 self.inhibited = True
 
     def release(self, key, now=None):
         key = self.name(key)
         now = time.monotonic() if now is None else now
         with self.lock:
-            if key in ("o", "c"):
+            if key in ("o", "p"):
                 self.releases[key] = now + self.RELEASE_DELAY
             else:
                 self.pressed.discard(key)
@@ -80,7 +80,7 @@ class HeldKeys:
             self._flush_releases(time.monotonic())
             self.enabled = True
             # 初始化时已按住的键必须先松开，再次按下才启动。
-            self.inhibited = bool(self.pressed.intersection({"o", "c", "ctrl", "ctrl_l", "ctrl_r"}))
+            self.inhibited = bool(self.pressed.intersection({"o", "p", "ctrl", "ctrl_l", "ctrl_r"}))
 
     def snapshot(self, now=None):
         with self.lock:
@@ -89,7 +89,7 @@ class HeldKeys:
             if self.enabled and not self.inhibited and not self.quitting:
                 if "o" in self.pressed:
                     direction = "open"
-                elif "c" in self.pressed:
+                elif "p" in self.pressed:
                     direction = "close"
             return direction, self.epoch, self.quitting
 
@@ -248,7 +248,7 @@ def confirm_stopped(gripper, timeout=1.0):
 def run_keyboard(gripper, keys, step=180, speed=10, subdivision=32):
     controller = ContinuousController(step, speed, gripper.device_id, subdivision,
                                       gripper.open_direction)
-    print(f"按住 o 张开、c 闭合；空格暂停，q / Esc 退出。速度 {speed:g} rad/s。")
+    print(f"按住 o 张开、p 闭合；空格暂停，q / Esc 退出。速度 {speed:g} rad/s。")
     print(f"松键停止续发，最多约 {step:g}° 剩余电机行程会走完（匀速约 {math.radians(step)/speed:.2f} 秒，另有加减速时间）。")
     print("监听本地桌面全局按键，无需回车或系统按键重复。")
     state = None

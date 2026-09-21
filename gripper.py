@@ -372,7 +372,7 @@ def main(argv=None):
     commands.add_parser("ports", help="列出主机串口")
     console_parser = commands.add_parser("console", help="保持同一串口连接，交互控制")
     console_parser.add_argument("--json", action="store_true", help="在控制台显示完整 JSON 反馈")
-    keyboard_parser = commands.add_parser("keyboard", help="按住 o 张开、c 闭合，不用回车")
+    keyboard_parser = commands.add_parser("keyboard", help="按住 o 张开、p 闭合，不用回车")
     keyboard_parser.add_argument("--step", type=float,
                                  help="前方最多保留的电机行程，默认 180 度；长按时提前续发")
     keyboard_parser.add_argument("--speed", type=float, help="电机速度 rad/s，默认读取配置")

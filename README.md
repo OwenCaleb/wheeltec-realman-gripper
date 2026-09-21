@@ -1,7 +1,7 @@
 # WHEELTEC 睿尔曼柔性夹爪 Python 控制
 
 通过 **USB 串口**控制 WHEELTEC 睿尔曼柔性夹爪，提供完整张开/闭合、指定电机行程点动、
-`o` / `c` 长按连续调节，以及供其他程序调用的 Python 接口。不依赖 ROS 或机械臂控制器。
+`o` / `p` 长按连续调节，以及供其他程序调用的 Python 接口。不依赖 ROS 或机械臂控制器。
 
 这是根据夹爪随附资料实现并在实物上验证的独立工具，并非厂家官方 SDK。
 
@@ -106,7 +106,7 @@ bash gripper.sh open --angle 180 --speed 3
 首次使用另一台夹爪时，先用小行程确认方向。当前默认映射为 **方向位 0 = 张开，1 = 闭合**，
 来自实物观察，与随附手册的文字方向相反。如你的设备相反，将 `open_direction` 改为 `1`。
 
-## 方式二：`o` / `c` 键盘连续调节
+## 方式二：`o` / `p` 键盘连续调节
 
 先退出 console 或其他占用夹爪串口的程序，在**主机本地桌面终端**运行：
 
@@ -117,13 +117,14 @@ bash gripper.sh keyboard
 | 按键 | 动作 |
 |---|---|
 | 按住 `o` | 连续张开 |
-| 按住 `c` | 连续闭合 |
+| 按住 `p` | 连续闭合 |
 | 松开方向键 | 停止续发，剩余有限行程走完 |
-| 空格 / 同时按 `o` 和 `c` | 暂停；松开方向键后再按才能继续 |
+| 空格 / 同时按 `o` 和 `p` | 暂停；松开方向键后再按才能继续 |
 | `q` / Esc | 停止续发，等待剩余行程结束后退出 |
 | Ctrl+C | 停止续发，尝试确认剩余行程结束后退出 |
 
 使用 **pynput 1.8.2** 监听真实的按下和松开事件，不需要回车或系统按键自动重复。
+闭合键为 `p`，字母 `c` 已取消夹爪绑定，便于与机械臂键盘控制同时使用。
 控制线程在上一段行程结束前根据角度反馈延长目标，因此长按时不会逐段等待到位。
 反向时先等待剩余行程结束；启动时已经按住的方向键需要松开后再按。
 
@@ -144,6 +145,48 @@ bash gripper.sh keyboard --step 90 --speed 10
 键盘监听范围是本地桌面全局，切换窗口后仍有效。普通 SSH 终端输入的字符不等于主机实体键盘事件。
 没有 `DISPLAY` 时，程序会尝试连接本机唯一的 X11 桌面；无法连接则在打开串口前退出。
 Wayland 桌面的全局监听未验证，推荐使用 X11 会话。
+
+## VLA 最简开关 demo
+
+[demo_vla.py](demo_vla.py) 的核心只有一句 `gripper.set_open(is_open)`。
+一条指令即可完整张开或闭合，不需要指定角度、速度或监听键盘：
+
+```bash
+.venv/bin/python demo_vla.py o    # 完整张开
+.venv/bin/python demo_vla.py p    # 完整闭合
+```
+
+demo **只接受 `o` / `p`**。需要顺序测试多条指令时，可保持一个连接执行：
+
+```bash
+# 依次张开、闭合、张开；重复的 p 会被跳过
+.venv/bin/python demo_vla.py o p p o
+```
+
+每次单独启动脚本会重新连接串口，适合快速验证。真实 VLA 循环应在循环外连接一次，
+状态发生变化时再下发动作；可以直接采用 demo 中的循环，或参考：
+
+```python
+from gripper import connect
+
+vla_actions = ["o", "o", "p", "p", "o"]  # 将模型的夹爪动作映射为 o/p 指令流
+with connect() as gripper:
+    last_action = None
+    for action in vla_actions:
+        if action not in ("o", "p"):
+            raise ValueError("夹爪指令只接受 o / p")
+        if action == last_action:
+            continue
+        result = gripper.set_open(action == "o")
+        if not result["completion_confirmed"]:
+            raise RuntimeError(result.get("note", "未确认夹爪运动完成"))
+        last_action = action
+```
+
+调用会阻塞等待夹爪反馈；默认完整开合实测约 3 秒，不适合在机械臂的高频控制线程中直接等待。
+接入需要并行运行的机械臂时，由独立的夹爪控制线程串行处理状态变化。
+demo 未确认动作完成会以状态码 `2` 退出，不继续执行后续动作；无动作反馈不等于已经达到期望开口。
+配置、方向和行程沿用 `config.json`。
 
 ## 接入 Python 程序
 
@@ -287,8 +330,8 @@ ID FLAG SPD_H SPD_L ANG_3 ANG_2 ANG_1 ANG_0 BCC
 .venv/bin/python -m unittest discover -v
 ```
 
-26 项离线测试覆盖协议、方向映射、开关 API、按键状态、X11 重复事件处理、提前续发、
-反向等待、端点无动作处理、超时和终端恢复。另 1 项 pynput 事件集成测试默认跳过。
+30 项离线测试覆盖协议、方向映射、开关 API、`o/p` 按键与 `c` 不干扰、X11 重复事件处理、提前续发、
+反向等待、端点无动作处理、超时、终端恢复和 VLA demo。另 1 项 pynput 事件集成测试默认跳过。
 如已安装 `xvfb` 和 `xauth`，可在隔离桌面运行：
 
 ```bash
@@ -301,11 +344,13 @@ xvfb-run -a sh -c 'GRIPPER_TEST_DISPLAY="$DISPLAY" .venv/bin/python -m unittest 
 
 ```text
 gripper.py                 USB 协议、串口、Python API 和命令行入口
+demo_vla.py                最简 VLA o/p 开关 demo，复用连接并跳过重复状态
 keyboard_control.py        pynput 按键监听与连续控制循环
 gripper.sh                 启动脚本
 config.example.json        配置模板；复制为本地 config.json
 requirements.txt           固定版本的 Python 依赖
 test_gripper.py             协议与 console 测试
+test_demo_vla.py            VLA demo 动作映射、连接复用与失败退出测试
 test_keyboard_control.py    控制状态与开关 API 测试
 test_keyboard_terminal.py   控制循环与终端恢复测试
 test_keyboard_pynput.py     隔离桌面的真实 pynput 事件测试

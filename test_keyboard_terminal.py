@@ -35,7 +35,7 @@ class KeyboardIntegrationTests(unittest.TestCase):
         clock = Clock()
 
         class ScriptedKeys(HeldKeys):
-            events = [(0.1, "press", "c"), (.8, "release", "c"),
+            events = [(0.1, "press", "p"), (.8, "release", "p"),
                       (1.2, "press", "o"), (1.8, "press", "q")]
             def snapshot(self, now=None):
                 while self.events and clock.now >= self.events[0][0]:
